@@ -3995,7 +3995,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 			dev_err(&i2c->dev,
 				"%s: failed to parse device tree node\n",
 				__func__);
-			goto err_parse_dt;
+			goto err;
 		}
 	} else {
 		aw8624->reset_gpio = -1;
@@ -4039,7 +4039,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 			if (ret) {
 				dev_err(&i2c->dev, "%s: rst request failed\n",
 					__func__);
-				goto err_reset_gpio_request;
+				goto err;
 			}
 		}
 	}
@@ -4050,7 +4050,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		if (ret) {
 			dev_err(&i2c->dev, "%s: int request failed\n",
 				__func__);
-			goto err_irq_gpio_request;
+			goto err;
 		}
 	}
 
@@ -4058,7 +4058,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	if (ret != 0) {
 		dev_err(&i2c->dev, "%s: aw8624_read_chipid failed ret=%d\n",
 			__func__, ret);
-		goto err_id;
+		goto err;
 	}
 
 	if (gpio_is_valid(aw8624->irq_gpio) &&
@@ -4074,7 +4074,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		if (ret != 0) {
 			dev_err(&i2c->dev, "%s: failed to request IRQ %d: %d\n",
 				__func__, gpio_to_irq(aw8624->irq_gpio), ret);
-			goto err_irq;
+			goto err;
 		}
 	} else {
 		dev_info(&i2c->dev, "%s skipping IRQ registration\n", __func__);
@@ -4116,7 +4116,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		dev_err(&i2c->dev,
 			"%s: Error creating aw8924_vibrator_work_queue\n",
 			__func__);
-		goto err_sysfs;
+		goto err;
 	}
 	aw8624_vibrator_init(aw8624);
 	aw8624_haptic_init(aw8624);
@@ -4131,7 +4131,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	if (rc < 0) {
 		dev_err(aw8624->dev, "register input device failed, rc=%d\n",
 			rc);
-		goto destroy_ff;
+		goto err;
 	}
 
 	dev_set_drvdata(&i2c->dev, aw8624);
@@ -4141,7 +4141,7 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	if (ret < 0) {
 		dev_info(&i2c->dev, "%s error creating sysfs attr files\n",
 			 __func__);
-		goto err_sysfs;
+		goto err;
 	}
 
 	g_aw8624 = aw8624;
@@ -4150,19 +4150,16 @@ aw8624_i2c_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 
 	return 0;
 
-err_sysfs:
-	devm_free_irq(&i2c->dev, gpio_to_irq(aw8624->irq_gpio), aw8624);
-destroy_ff:
+err:
 	input_ff_destroy(aw8624->input_dev);
-err_irq:
-err_id:
-	if (gpio_is_valid(aw8624->irq_gpio))
+	if (gpio_is_valid(aw8624->irq_gpio)) {
+		devm_free_irq(&i2c->dev, gpio_to_irq(aw8624->irq_gpio), aw8624);
 		devm_gpio_free(&i2c->dev, aw8624->irq_gpio);
-err_irq_gpio_request:
-	if (gpio_is_valid(aw8624->reset_gpio))
+	}
+	if (gpio_is_valid(aw8624->reset_gpio)) {
+		devm_free_irq(&i2c->dev, gpio_to_irq(aw8624->reset_gpio), aw8624);
 		devm_gpio_free(&i2c->dev, aw8624->reset_gpio);
-err_reset_gpio_request:
-err_parse_dt:
+	}
 	device_init_wakeup(aw8624->dev, false);
 	devm_kfree(&i2c->dev, aw8624);
 	aw8624 = NULL;
