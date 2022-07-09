@@ -10,7 +10,7 @@ set -e
 ##----------------------------------------------------------##
 # Basic Information
 KERNEL_DIR="$(pwd)"
-VERSION=NiTrix_v1.7
+VERSION=BDay2Day_v1.8
 MODEL=Xiaomi
 DEVICE=MiAtoll
 DEFCONFIG=cust_defconfig
